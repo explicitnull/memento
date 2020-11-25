@@ -14,8 +14,8 @@ import (
 )
 
 func main() {
-	if len(os.Args) != 4 {
-		fmt.Println("Usage: memento address port ttl")
+	if len(os.Args) != 5 {
+		fmt.Println("Usage  : memento <address> <port> <ttl> <eviction_flag>\nExample: memento 127.0.0.1 5530 3600 true")
 		os.Exit(1)
 	}
 

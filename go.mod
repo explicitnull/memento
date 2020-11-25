@@ -9,4 +9,5 @@ require (
 	github.com/prometheus/common v0.15.0
 	github.com/sirupsen/logrus v1.7.0
 	github.com/sqs/goreturns v0.0.0-20181028201513-538ac6014518 // indirect
+	golang.org/x/mod v0.1.1-0.20191105210325-c90efee705ee
 )

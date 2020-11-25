@@ -14,7 +14,8 @@ type SrvConfig struct {
 
 // StorageConfig - все настройки хранилища
 type StorageConfig struct {
-	TTL int
+	TTL        int
+	Expiration bool
 }
 
 // NewSrvConfig создает конфигурацию для конструктора сервера
@@ -36,5 +37,8 @@ func NewStorageConfig() (c StorageConfig, err error) {
 		log.Fatalf("error validating storage TTL: %s", err)
 	}
 
+	if os.Args[4] == "true" {
+		c.Expiration = true
+	}
 	return
 }

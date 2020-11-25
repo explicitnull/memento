@@ -10,8 +10,8 @@ import (
 func HandleRead(st *storage.Storage, key string) (resp string, err error) {
 	rec, _ := st.ReadRecord(key)
 	if rec.Value != "" {
-		// format: "value" "expiration"
-		resp = rec.Value + " " + rec.Expiration.Format("RFC3339")
+		// format: "value" "ExpirationTime"
+		resp = rec.Value + " " + rec.ExpirationTime.Format("RFC3339")
 	} else {
 		resp = "record not found"
 	}

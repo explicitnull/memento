@@ -24,6 +24,10 @@ const (
 // ServeConnection выполняет для коннекта pre-flight checks и выступает аналогом HTTP-роутера
 func ServeConnection(conn net.Conn, wg *sync.WaitGroup, st *storage.Storage) {
 	for {
+		// генерируем уникальный ID запроса для лога
+		reqID := uniuri.New()
+		le := log.WithField("request_id", reqID).WithField("remote", conn.RemoteAddr())
+
 		// для повышения производительности нужно использовать бинарные заголовки,
 		// но для экономии времени используем текстовые
 		req, err := bufio.NewReader(conn).ReadString('\n')
@@ -31,11 +35,12 @@ func ServeConnection(conn net.Conn, wg *sync.WaitGroup, st *storage.Storage) {
 			log.Errorf("unable to read request: %s", err)
 			break
 		}
-		// генерируем уникальный ID запроса для лога
-		reqID := uniuri.New()
-		le := log.WithField("request_id", reqID).WithField("remote", conn.RemoteAddr())
 
 		fields := strings.Fields(string(req))
+		if len(fields) == 0 {
+			le.Errorf("empty request")
+			continue
+		}
 		operCode := fields[0]
 		log.Debugf("parsed req: %v, length: %v\n", fields, len(fields))
 		var resp string
@@ -59,9 +64,9 @@ func ServeConnection(conn net.Conn, wg *sync.WaitGroup, st *storage.Storage) {
 			}
 			// создаем объект типа "запись"
 			rec := &storage.Record{
-				Key:        key,
-				Value:      fields[2],
-				Expiration: exp,
+				Key:            key,
+				Value:          fields[2],
+				ExpirationTime: exp,
 			}
 
 			resp, err = HandlePut(st, rec)
@@ -118,5 +123,8 @@ func setExpirationTime(st *storage.Storage, sttl string) (exp time.Time, err err
 	if ttl == 0 {
 		ttl = st.DefaultTTL
 	}
+
+	exp = time.Now().Add(time.Second * time.Duration(ttl))
+	log.Debugf("default TTL: %d, sttl: %s, exp: %s", st.DefaultTTL, sttl, exp)
 	return
 }
