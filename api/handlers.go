@@ -6,7 +6,7 @@ import (
 	log "github.com/sirupsen/logrus"
 )
 
-// Возвращает запись по ключу
+// HandleRead возвращает запись по ключу
 func HandleRead(st *storage.Storage, key string) (resp string, err error) {
 	rec, _ := st.ReadRecord(key)
 	if rec.Value != "" {
@@ -19,7 +19,8 @@ func HandleRead(st *storage.Storage, key string) (resp string, err error) {
 	return
 }
 
-// Записывает/перезаписывает запись по ключу
+// HandlePut записывает/перезаписывает запись по ключу
+// Можно добавить в вызов варианты действий, когда такая запись уже существует
 func HandlePut(st *storage.Storage, rec *storage.Record) (resp string, err error) {
 	st.PutRecord(rec)
 	resp = "record put"

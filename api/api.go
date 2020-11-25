@@ -21,20 +21,23 @@ const (
 	bye    = "bye"
 )
 
-func HandleConnection(conn net.Conn, wg *sync.WaitGroup, st *storage.Storage) {
+// ServeConnection выполняет для коннекта pre-flight checks и выступает аналогом HTTP-роутера
+func ServeConnection(conn net.Conn, wg *sync.WaitGroup, st *storage.Storage) {
 	for {
+		// для повышения производительности нужно использовать бинарные заголовки,
+		// но для экономии времени используем текстовые
 		req, err := bufio.NewReader(conn).ReadString('\n')
 		if err != nil {
 			log.Errorf("unable to read request: %s", err)
 			break
 		}
+		// генерируем уникальный ID запроса для лога
 		reqID := uniuri.New()
 		le := log.WithField("request_id", reqID).WithField("remote", conn.RemoteAddr())
 
 		fields := strings.Fields(string(req))
 		operCode := fields[0]
 		log.Debugf("parsed req: %v, length: %v\n", fields, len(fields))
-
 		var resp string
 
 		// проверяем число аргументов
@@ -48,21 +51,17 @@ func HandleConnection(conn net.Conn, wg *sync.WaitGroup, st *storage.Storage) {
 
 		switch operCode {
 		case put:
-			// парсим TTL
-			ttl, err := strconv.Atoi(fields[3])
+			exp, err := setExpirationTime(st, fields[3])
 			if err != nil {
-				log.Errorf("error parsing request ttl: %s", err)
-				return
-			}
-			if ttl == 0 {
-				ttl = st.DefaultTTL
+				le.Errorf("wrong ttl value: %s", fields[3])
+				conn.Write([]byte("wrong ttl value\n"))
+				continue
 			}
 			// создаем объект типа "запись"
-			now := time.Now()
 			rec := &storage.Record{
 				Key:        key,
 				Value:      fields[2],
-				Expiration: now.Add(time.Second * time.Duration(ttl)),
+				Expiration: exp,
 			}
 
 			resp, err = HandlePut(st, rec)
@@ -93,9 +92,8 @@ func HandleConnection(conn net.Conn, wg *sync.WaitGroup, st *storage.Storage) {
 
 func validateRequest(fields []string) (ok bool) {
 	fieldsNum := len(fields)
-	operCode := fields[0]
 
-	switch operCode {
+	switch fields[0] {
 	case put:
 		// формат: put key value ttl, для упрощения сделаем TTL обязательным параметром
 		if fieldsNum == 4 {
@@ -106,6 +104,19 @@ func validateRequest(fields []string) (ok bool) {
 		if fieldsNum == 2 {
 			ok = true
 		}
+	}
+	return
+}
+
+func setExpirationTime(st *storage.Storage, sttl string) (exp time.Time, err error) {
+	ttl, err := strconv.Atoi(sttl)
+	if err != nil {
+		log.Errorf("error parsing request ttl: %s", err)
+		return
+	}
+
+	if ttl == 0 {
+		ttl = st.DefaultTTL
 	}
 	return
 }

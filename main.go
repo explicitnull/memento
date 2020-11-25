@@ -54,7 +54,7 @@ func main() {
 		log.Debugf("accepted connection from %s", conn.RemoteAddr())
 
 		wg.Add(1)
-		go api.HandleConnection(conn, &wg, primStorage)
+		go api.ServeConnection(conn, &wg, primStorage)
 	}
 
 }
